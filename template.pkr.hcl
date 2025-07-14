@@ -1,3 +1,4 @@
+cat template.pkr.hcl 
 packer {
   required_plugins {
     virtualbox = {
@@ -16,8 +17,8 @@ source "virtualbox-iso" "debian-amd64" {
   iso_url            = var.iso_path
   iso_checksum       = "none"
   ssh_username       = "root"
-  ssh_password       = "debian"
-  shutdown_command   = "echo 'debian' | sudo -S shutdown -P now"
+  ssh_password       = "ubuntu"
+  shutdown_command   = "echo 'ubuntu' | sudo -S shutdown -P now"
 
   guest_os_type      = "Debian_64"
   vm_name            = "k8s-debian-amd64"
