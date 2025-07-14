@@ -1,8 +1,11 @@
-#!/bin/bash
+# !/bin/bash
 set -eux
 
 # Habilitar IP forwarding (para flannel/calico)
 echo "net.bridge.bridge-nf-call-iptables=1" >>/etc/sysctl.conf
+
+# 🟢 Cargar el módulo necesario
+modprobe br_netfilter
 sysctl -p
 
 # Desactivar swap
