@@ -1,4 +1,3 @@
-cat template.pkr.hcl 
 packer {
   required_plugins {
     virtualbox = {
