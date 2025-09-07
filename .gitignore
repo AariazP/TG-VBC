@@ -1,2 +1,4 @@
 *.iso
 template-backups/
+red.sh
+bootup.sh
