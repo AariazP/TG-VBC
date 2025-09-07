@@ -1,3 +1,11 @@
+#!/bin/bash
+
+# este script tenia el proposito inicial de
+# crear y configurar las vms antes de tener las plantillas
+# , actualmente no se usa, pero se mantiene como alternativa
+# en caso de perder las plantillas
+
+
 xe host-list
 export host_uuid="$( xe host-list | grep -oP "[\d\w-]+" | grep -oP ".{20,}" | head -n 1 )"
 echo host_uuid is this :    _____________ $host_uuid ______

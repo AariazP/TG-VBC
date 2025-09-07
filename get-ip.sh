@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# este script tiene el proposito de obtener la ip de una vm
+# a traves de su nombre dentro de XCP-ng
+
 if [ $# -lt 1 ]
 then
    echo "usage: get-ip.sh <vm-name>"

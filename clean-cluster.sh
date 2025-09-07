@@ -1,6 +1,12 @@
 #!/bin/bash
 
+# script para limpiar el cluster
+
 ASSUME_YES=false
+
+# este ciclo habilita la opcion -y, que hace 
+# que el script no pida confirmacion para borrar
+# las vms
 
 while getopts "y" opt; do
   case $opt in
