@@ -1,0 +1,48 @@
+#!/bin/bash
+
+ROOT=0
+CMD=""
+VM=""
+
+# First pass: get options until first non-option (the VM name)
+while getopts "rc:" opt; do
+  case "$opt" in
+    r) ROOT=1 ;;
+    c) CMD="$OPTARG" ;;
+    *) echo "Usage: $0 [-r] <vm-name> [-c command]" >&2; exit 1 ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+# Next argument should be the VM name
+if [ $# -lt 1 ]; then
+  echo "Usage: $0 [-r] <vm-name> [-c command]" >&2
+  exit 1
+fi
+VM="$1"
+shift 1
+
+# Second pass: process any remaining options (like -c after VM name)
+OPTIND=1
+while getopts "c:" opt; do
+  case "$opt" in
+    c) CMD="$OPTARG" ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+IP=$( get-ip "$VM" 2>/dev/null )
+
+if [ "$ROOT" -eq 1 ]; then
+  if [ -n "$CMD" ]; then
+    ssh -i ~/.ssh/id_internal_vm root@"$IP" "$CMD" 2>/dev/null
+  else
+    ssh -i ~/.ssh/id_internal_vm root@"$IP" 2>/dev/null
+  fi
+else
+  if [ -n "$CMD" ]; then
+    ssh "$IP" "$CMD" 2>/dev/null
+  else
+    ssh "$IP" 2>/dev/null
+  fi
+fi

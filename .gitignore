@@ -1,6 +1,6 @@
 *.iso
 template-backups/
-red.sh
-bootup.sh
+red
+bootup
 cd-commands
 pendientes.txt

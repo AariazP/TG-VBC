@@ -1,0 +1,28 @@
+#!/bin/bash
+
+PVC="$1"
+
+cat <<EOF > exporter_file.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: exporter
+spec:
+  containers:
+  - name: exporter
+    image: alpine
+    command: ["sleep", "3600"]
+    volumeMounts:
+    - mountPath: /data
+      name: export-pvc
+  volumes:
+  - name: export-pvc
+    persistentVolumeClaim:
+      claimName: ${PVC}
+EOF
+
+
+upload_yaml master1  exporter_file.yaml
+ssh-vm master1 -c "kubectl cp exporter:/data ./backup"
+
+rm exporter_file.yaml

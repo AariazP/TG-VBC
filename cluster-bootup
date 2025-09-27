@@ -16,7 +16,7 @@ while getopts "w:m:b" opt; do
 done
 
 [[ $NUM_MASTERS > 1 ]] && HAS_LB=1 
-[[ $BACKUP > 0 ]] && bash boot-servers.sh -b || bash boot-servers.sh 
+[[ $BACKUP > 0 ]] &&  boot-servers -b ||  boot-servers 
 
 sleep 3
 
@@ -36,7 +36,7 @@ do
 
 	for i in $( seq 1 $value )
 	do
-	    bash bootvm.sh $name$i
+	     bootvm $name$i
 	done
 
 	sleep 2
@@ -46,12 +46,11 @@ do
 	     echo "=== setting up $name$i hostname ==="
 	     while [ -z $VM_IP ]
 	     do 
-		VM_IP=$( bash get-ip.sh $name$i )
+		VM_IP=$(  get-ip $name$i )
 		sleep 1
 	     done
 
-	     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-		 -i ~/.ssh/id_internal_vm root@$VM_IP \
+	     ssh -i ~/.ssh/id_internal_vm root@$VM_IP \
 		 "hostnamectl set-hostname $name$i; hostname; \
 		  echo '127.0.0.1 $name$i' >> /etc/hosts"
 
@@ -59,18 +58,16 @@ do
 	done
 done
 
-MASTER_IP=$( bash get-ip.sh master1 )
-[ $HAS_LB -gt 0 ] && LB_IP=$( bash get-ip.sh load-balancer1 )
+MASTER_IP=$(  get-ip master1 )
+[ $HAS_LB -gt 0 ] && LB_IP=$(  get-ip load-balancer1 )
 
 if [ $HAS_LB -gt 0 ]
 then
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-    -i ~/.ssh/id_internal_vm root@$MASTER_IP \
+ssh -i ~/.ssh/id_internal_vm root@$MASTER_IP \
      "curl -sfL https://get.k3s.io | sh -s - server --cluster-init --tls-san ${LB_IP}"
 else
 
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-    -i ~/.ssh/id_internal_vm root@$MASTER_IP \
+ssh -i ~/.ssh/id_internal_vm root@$MASTER_IP \
      "curl -sfL https://get.k3s.io | sh -"
 
 fi
@@ -78,8 +75,7 @@ fi
 while [ -z $TOKEN ]
 do
 
-TOKEN=$( ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-         -i ~/.ssh/id_internal_vm root@$MASTER_IP \
+TOKEN=$( ssh -i ~/.ssh/id_internal_vm root@$MASTER_IP \
          "sudo cat /var/lib/rancher/k3s/server/node-token" )
 
 done
@@ -88,8 +84,7 @@ done
 if [[ $HAS_LB > 0 ]]
 then
 
-	ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-	    -i ~/.ssh/id_internal_vm root@$LB_IP "apt install haproxy -y"
+	ssh -i ~/.ssh/id_internal_vm root@$LB_IP "apt install haproxy -y"
 
 
 	config="frontend k3s-api
@@ -101,7 +96,7 @@ then
 	"
 
 	for i in $( seq 1 $NUM_MASTERS ); do
-	    ip=$( bash get-ip.sh master$i )
+	    ip=$(  get-ip master$i )
 	    config+="    server master${i} ${ip}:6443 check 
 	"
 	done
@@ -110,13 +105,11 @@ then
 	echo "$config"
 	echo "_____________________"
 
-	ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-	    -i ~/.ssh/id_internal_vm root@$LB_IP \
+	ssh -i ~/.ssh/id_internal_vm root@$LB_IP \
 	    "cat > /etc/haproxy/haproxy.cfg" <<< "$config"
 
 
-	ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-	    -i ~/.ssh/id_internal_vm root@$LB_IP "sudo systemctl restart haproxy"
+	ssh -i ~/.ssh/id_internal_vm root@$LB_IP "sudo systemctl restart haproxy"
 
 fi
 
@@ -141,12 +134,11 @@ do
 	     echo "=== joining host $name$i to cluster ==="
 	     while [ -z $VM_IP ]
 	     do 
-		VM_IP=$( bash get-ip.sh $name$i )
+		VM_IP=$(  get-ip $name$i )
 		sleep 1
 	     done
 
-	     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-		 -i ~/.ssh/id_internal_vm root@$VM_IP \
+	     ssh -i ~/.ssh/id_internal_vm root@$VM_IP \
 		 "curl -sfL https://get.k3s.io | K3S_URL=https://${JOIN_IP}:6443 K3S_TOKEN=${TOKEN} sh ${mode}"
 
 	     VM_IP=""

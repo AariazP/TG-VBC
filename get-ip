@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# ---------------------------------------------------------------
+# Script: get-ip.sh
+# Descripción:
+#   Este script obtiene la dirección IP de una máquina virtual 
+#   (VM) en XCP-ng a partir de su nombre.
+# ---------------------------------------------------------------
+
+# Verificación de argumentos:
+# Si no se pasa al menos un argumento (nombre de la VM), se muestra 
+# el uso correcto del script y se termina.
+if [ $# -lt 1 ]
+then
+   echo "usage: get-ip <vm-name>"
+   exit 0
+fi
+
+# Caso especial: 
+# Si el nombre de la VM es "NAT-Master", se devuelve una IP fija 
+# sin necesidad de consultar nada en XCP-ng.
+if [[ "$1" == "NAT-Master" ]]
+then
+   echo "172.30.29.2"
+   exit 0
+fi
+
+# Obtiene el UUID de la VM en XCP-ng a partir del nombre de la VM.
+VM_UUID=$( xe vm-list name-label="$1" --minimal )
+
+# Obtiene las direcciones MAC de las interfaces de red (VIFs) 
+# asociadas a la VM, separadas por coma.
+VM_MAC=$( xe vif-list vm-uuid="$VM_UUID" params=MAC --minimal )
+
+# Convierte la lista separada por comas en un arreglo de MACs. 
+# Se asumen máximo dos interfaces de red.
+MACS=( $( echo $VM_MAC | cut -d, -f1 ) $( echo $VM_MAC | cut -d, -f2 ) )
+
+# Redirige los errores a /dev/null para evitar mostrar mensajes 
+# de advertencia de ssh u otros.
+exec 2> /dev/null
+
+# Se conecta al servidor NAT (172.30.29.2) vía SSH usando una llave 
+# privada, y ejecuta el comando `ip n` (vecinos en ARP/NDP).
+# Luego filtra las líneas que contengan alguna de las MACs de la VM 
+# y extrae la primera columna (la IP asociada).
+VM_IP=$( ssh -i ~/.ssh/id_nat_server debian@172.30.29.2 \
+        "ip n | fgrep -e ${MACS[0]} -e ${MACS[1]}" | cut -d" " -f1 )
+
+# Muestra la IP obtenida sin salto de línea adicional al final.
+echo -n $VM_IP
+
