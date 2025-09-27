@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: backup-pod
+spec:
+  containers:
+  - name: backup
+    image: alpine
+    command: [ "sleep", "3600" ]
+    volumeMounts:
+    - mountPath: /data
+      name: app-data
+  volumes:
+  - name: app-data
+    persistentVolumeClaim:
+      claimName: your-pvc

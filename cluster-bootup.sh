@@ -29,7 +29,7 @@ then
 	VALUES=( 1 $NUM_MASTERS $NUM_WORKERS )
 fi
 
-for idx in $( seq 0 ${#NAMES[@]} )
+for idx in $( seq 0 ${#NAMES[@]} | head -n -1 )
 do
         name=${NAMES[$idx]}
 	value=${VALUES[$idx]} 
@@ -60,15 +60,29 @@ do
 done
 
 MASTER_IP=$( bash get-ip.sh master1 )
-LB_IP=$( bash get-ip.sh load-balancer1 )
+[ $HAS_LB -gt 0 ] && LB_IP=$( bash get-ip.sh load-balancer1 )
 
+if [ $HAS_LB -gt 0 ]
+then
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
     -i ~/.ssh/id_internal_vm root@$MASTER_IP \
      "curl -sfL https://get.k3s.io | sh -s - server --cluster-init --tls-san ${LB_IP}"
+else
+
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    -i ~/.ssh/id_internal_vm root@$MASTER_IP \
+     "curl -sfL https://get.k3s.io | sh -"
+
+fi
+
+while [ -z $TOKEN ]
+do
 
 TOKEN=$( ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
          -i ~/.ssh/id_internal_vm root@$MASTER_IP \
          "sudo cat /var/lib/rancher/k3s/server/node-token" )
+
+done
 
 
 if [[ $HAS_LB > 0 ]]
@@ -110,6 +124,10 @@ NAMES=( master worker  )
 VALUES=( $NUM_MASTERS $NUM_WORKERS )
 MODES=( "-s - server" "-" )
 
+JOIN_IP=${LB_IP}
+
+[ $HAS_LB -eq 0 ] && JOIN_IP=$MASTER_IP
+
 for idx in {0..1}
 do
         name=${NAMES[$idx]}
@@ -129,7 +147,7 @@ do
 
 	     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
 		 -i ~/.ssh/id_internal_vm root@$VM_IP \
-		 "curl -sfL https://get.k3s.io | K3S_URL=https://${LB_IP}:6443 K3S_TOKEN=${TOKEN} sh ${mode}"
+		 "curl -sfL https://get.k3s.io | K3S_URL=https://${JOIN_IP}:6443 K3S_TOKEN=${TOKEN} sh ${mode}"
 
 	     VM_IP=""
 	done

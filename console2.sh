@@ -4,7 +4,7 @@
 cat banner.txt
 
 # Menu options
-options=("subir archivo" "limpiar cluster" "backup")
+options=("subir archivo" "limpiar cluster" "backup" "crear vm" "ssh" "scaling")
 
 echo -e "Seleccione una opción:\n"
 for i in "${!options[@]}"; do
