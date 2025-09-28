@@ -22,19 +22,19 @@ while getopts "b" opt; do
   esac
 done
 
-# Crear el servidor NAT principal (Master) a partir de la plantilla "nat-server"
-MASTER_UUID=$(xe vm-install template="nat-server" new-name-label="NAT-Master")
+# Crear el servidor NAT principal (Master) a partir de la plantilla "nat-server" si no existe ya
+MASTER=0
+xe vm-list | grep -vq "NAT-Master" && MASTER=1
+[ $MASTER -eq 1 ] && MASTER_UUID=$(xe vm-install template="nat-server" new-name-label="NAT-Master")
 
 # Si se indicó la opción -b, crear también el servidor de backup
 [[ $BACKUP > 0 ]] && BACKUP_UUID=$(xe vm-install \
      template="nat-server" new-name-label="NAT-Backup")
 
 # Iniciar la VM principal (Master)
-xe vm-start uuid=$MASTER_UUID
-
+[ $MASTER -eq 1 ] && xe vm-start uuid=$MASTER_UUID
 # Esperar 2 segundos para dar tiempo a que arranque la Master
 sleep 2
 
 # Si se creó la VM de backup, iniciarla también
 [[ $BACKUP > 0 ]] && xe vm-start uuid=$BACKUP_UUID
-

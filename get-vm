@@ -1,0 +1,28 @@
+#!/bin/bash
+
+CHECK_ALL=0
+while getopts "ap:" opt; do
+  case $opt in
+    a) CHECK_ALL=1 ;;
+    p) ssh-vm NAT-Master -c "ping -c 1 $( get-ip $OPTARG )"
+       exit $?;;
+    *) echo "Usage: $0 [-a] [-p vm_name]" >&2
+       exit 1 ;;
+  esac
+done
+
+# the function of this script is listing vms and checking which ones are alive
+PATTERN=${1:-""}
+[[ $PATTERN == "-a" ]] && PATTERN=${2:-""}
+
+VMS=$( xe vm-list | grep name-label | grep -v "Control domain" | grep "${PATTERN}" | cut -d":" -f2 )
+
+if [ $CHECK_ALL -eq 1 ]
+then
+   for vm in $VMS
+   do
+    get-vm -p $vm 1>/dev/null && echo $vm 
+   done
+else
+   echo "$VMS"
+fi

@@ -45,6 +45,10 @@ while getopts "c:" opt; do
 done
 shift $((OPTIND - 1))
 
+# Agrega funcioalidad para loguearse en los servidores NAT
+KEY_FILE="id_internal_vm"
+echo $VM | grep -q "NAT" && KEY_FILE="id_nat_server"
+
 # Obtener la dirección IP de la VM usando el script auxiliar `get-ip`
 # (debe estar en el PATH del sistema).
 IP=$( get-ip "$VM" 2>/dev/null )
@@ -54,10 +58,10 @@ if [ "$ROOT" -eq 1 ]; then
   # Si se especifica conexión como root
   if [ -n "$CMD" ]; then
     # Ejecutar comando remoto como root
-    ssh -i ~/.ssh/id_internal_vm root@"$IP" "$CMD" 2>/dev/null
+    ssh -i ~/.ssh/${KEY_FILE} root@"$IP" "$CMD" 2>/dev/null
   else
     # Abrir sesión interactiva como root
-    ssh -i ~/.ssh/id_internal_vm root@"$IP" 2>/dev/null
+    ssh -i ~/.ssh/${KEY_FILE} root@"$IP" 2>/dev/null
   fi
 else
   # Conexión como usuario por defecto (depende de la configuración SSH de la VM)

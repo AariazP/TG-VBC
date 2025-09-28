@@ -1,8 +1,29 @@
 #!/bin/bash
 
-PVC="$1"
+# ensures file cleanup after cancellation
 
-cat <<EOF > exporter_file.yaml
+trap "rm -f exporter_file.yaml" SIGINT
+
+MODE="pvc"
+TARGET=""
+POD=""
+FOLDER=""
+while getopts "p:f:" opt; do
+  case "$opt" in
+    p) MODE="pod"; POD="$OPTARG" ;;     # backup from pod:path
+    f) MODE="folder"; FOLDER="$OPTARG" ;; # backup from host path
+  esac
+done
+shift $((OPTIND-1))
+
+NODE="$( get-vm -a master | head -n 1 )"
+
+PVC="$1"
+DATE=$( date +%Y-%m-%d-%H-%M-%S-%s )
+
+if [[ "$MODE" == "pvc" ]]; then
+  # --- current PVC backup flow ---
+  cat <<EOF > exporter_file.yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -21,22 +42,29 @@ spec:
       claimName: ${PVC}
 EOF
 
+  upload_yaml ${NODE} exporter_file.yaml
 
-upload_yaml master1  exporter_file.yaml
+  while [[ $(ssh-vm -r ${NODE} -c "kubectl get pod/exporter -o jsonpath='{.status.phase}'") != "Running" ]]; do
+    sleep 1
+  done
 
-while [[ ` ssh-vm -r master1 -c "kubectl get pod/exporter" \
-	 | awk '/exporter/ {print $3}' ` != "Running" ]]
-do
-	sleep 1;
-done
+  ssh-vm -r ${NODE} -c "kubectl cp exporter:/data ./backup-${DATE}"
+  ssh-vm -r ${NODE} -c "kubectl delete pod/exporter"
+  ssh-vm -r ${NODE} -c "tar -cvf backup-${DATE}.tar ./backup-${DATE}"
 
-DATE=$( date +%Y-%m-%d-%H-%M-%S-%s )
+elif [[ "$MODE" == "pod" ]]; then
+  # --- backup arbitrary path from pod ---
+  ssh-vm -r ${NODE} -c "kubectl cp ${POD} ./backup-${DATE}"
+  ssh-vm -r ${NODE} -c "tar -cvf backup-${DATE}.tar ./backup-${DATE}"
 
-ssh-vm -r master1 -c "kubectl cp exporter:/data ./backup-${DATE}"
-ssh-vm -r master1 -c "kubectl delete pod/exporter"
-ssh-vm -r master1 -c "tar -cvf backup-${DATE}.tar ./backup-${DATE}"
+elif [[ "$MODE" == "folder" ]]; then
+  # --- backup arbitrary folder from node ---
+  ssh-vm -r ${NODE} -c "tar -cvf /tmp/backup-${DATE}.tar -C / ${FOLDER}"
+  scp -i ~/.ssh/id_internal_vm root@$(get-ip ${NODE}):/tmp/backup-${DATE}.tar ./
+  exit 0
+fi
 
 exec 2>/dev/null
-scp -i ~/.ssh/id_internal_vm root@$( get-ip master1 ):./backup-${DATE}.tar ./
+scp -i ~/.ssh/id_internal_vm root@$(get-ip ${NODE}):./backup-${DATE}.tar ./
 
-rm exporter_file.yaml
+rm -f exporter_file.yaml
