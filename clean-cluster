@@ -1,17 +1,24 @@
 #!/bin/bash
 
-# script para limpiar el cluster
+# ---------------------------------------------------------------
+# Script: clean-cluster.sh
+# Descripción:
+#   Este script elimina todas las máquinas virtuales (VMs) de un 
+#   cluster en XCP-ng, excluyendo dominios del sistema. Puede 
+#   ejecutarse de manera interactiva o automática usando la opción -y.
+# ---------------------------------------------------------------
 
+# Variable que indica si se debe asumir "sí" automáticamente
 ASSUME_YES=false
 
-# este ciclo habilita la opcion -y, que hace 
-# que el script no pida confirmacion para borrar
-# las vms
-
+# ---------------------------------------------------------------
+# Procesar opción:
+#   -y  → Asumir "sí" automáticamente para borrar las VMs
+# ---------------------------------------------------------------
 while getopts "y" opt; do
   case $opt in
     y)
-      ASSUME_YES=true
+      ASSUME_YES=true  # Activar borrado automático
       ;;
     *)
       echo "Usage: $0 [-y]"
@@ -20,16 +27,25 @@ while getopts "y" opt; do
   esac
 done
 
+# Si no se asumió "sí", pedir confirmación al usuario
 if [ "$ASSUME_YES" = false ]; then
   read -p "Are you really sure you want to clean cluster. (y/N): " resp
   [[ ! $resp =~ (y|Y|yes|Yes|YES) ]] && exit 0
 fi
 
+# Obtener lista de VMs a eliminar, excluyendo dominios del sistema
 vms=$(xe vm-list | grep name-label | grep -v "domain" | grep -oP "(?<=: ).+")
 
+# Iterar sobre cada VM encontrada
 for vm in $vms; do
+  # Obtener UUID de la VM
   UUID=$(xe vm-list name-label="$vm" --minimal | tr ',' ' ')
+  
+  # Apagar la VM de forma forzada en segundo plano
   xe vm-shutdown uuid=$UUID force=true &
-  wait $!
+  wait $!  # Esperar a que termine el apagado
+  
+  # Eliminar la VM del sistema
   xe vm-destroy uuid=$UUID
 done
+

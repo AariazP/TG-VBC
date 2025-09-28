@@ -1,146 +1,172 @@
 #!/bin/bash
 
+# ---------------------------------------------------------------
+# Script: cluster-bootup.sh
+# Descripción:
+#   Este script crea e inicializa un cluster K3s en XCP-ng, 
+#   desplegando servidores master, workers, y opcionalmente 
+#   un load balancer y un servidor NAT de backup. Configura 
+#   hostnames, IPs, HAProxy (si hay load balancer) y une 
+#   todos los nodos al cluster.
+# ---------------------------------------------------------------
+
+# Valores por defecto
 NUM_WORKERS=2
 NUM_MASTERS=1
 BACKUP=0
 HAS_LB=0
 
+# Procesar opciones:
+# -w NUM_WORKERS  → Número de nodos worker
+# -m NUM_MASTERS  → Número de nodos master
+# -b              → Crear NAT server backup
 while getopts "w:m:b" opt; do
   case $opt in
     w) NUM_WORKERS=$OPTARG ;;
     m) NUM_MASTERS=$OPTARG ;;
-    b) BACKUP=1;;
+    b) BACKUP=1 ;;
     *) echo "Usage: $0 [-w NUM_WORKERS] [-m NUM_MASTERS] [-b NAT server backup?]" >&2
        exit 1 ;;
   esac
 done
 
+# Si hay más de un master, se necesitará un load balancer
 [[ $NUM_MASTERS > 1 ]] && HAS_LB=1 
+
+# Crear servidores NAT (Master y opcionalmente Backup)
 [[ $BACKUP > 0 ]] &&  boot-servers -b ||  boot-servers 
 
+# Esperar 3 segundos para que arranquen
 sleep 3
 
-NAMES=( master worker  )
+# Definir nombres y cantidad de nodos a crear
+NAMES=( master worker )
 VALUES=( $NUM_MASTERS $NUM_WORKERS )
 
-if [[ $HAS_LB > 0 ]]
-then
-	NAMES=( load-balancer master worker  )
-	VALUES=( 1 $NUM_MASTERS $NUM_WORKERS )
+# Si hay load balancer, agregarlo al arreglo
+if [[ $HAS_LB > 0 ]]; then
+    NAMES=( load-balancer master worker )
+    VALUES=( 1 $NUM_MASTERS $NUM_WORKERS )
 fi
 
-for idx in $( seq 0 ${#NAMES[@]} | head -n -1 )
-do
-        name=${NAMES[$idx]}
-	value=${VALUES[$idx]} 
+# Crear VMs según tipo y cantidad
+for idx in $( seq 0 ${#NAMES[@]} | head -n -1 ); do
+    name=${NAMES[$idx]}
+    value=${VALUES[$idx]} 
 
-	for i in $( seq 1 $value )
-	do
-	     bootvm $name$i
-	done
+    # Crear cada VM del tipo correspondiente
+    for i in $( seq 1 $value ); do
+        bootvm $name$i
+    done
 
-	sleep 2
+    sleep 2
 
-	for i in $( seq 1 $value )
-	do
-	     echo "=== setting up $name$i hostname ==="
-	     while [ -z $VM_IP ]
-	     do 
-		VM_IP=$(  get-ip $name$i )
-		sleep 1
-	     done
+    # Configurar hostname y /etc/hosts en cada VM
+    for i in $( seq 1 $value ); do
+        echo "=== setting up $name$i hostname ==="
+        
+        # Esperar a que la VM tenga IP
+        while [ -z $VM_IP ]; do 
+            VM_IP=$( get-ip $name$i )
+            sleep 1
+        done
 
-	     ssh -i ~/.ssh/id_internal_vm root@$VM_IP \
-		 "hostnamectl set-hostname $name$i; hostname; \
-		  echo '127.0.0.1 $name$i' >> /etc/hosts"
+        # Configurar hostname remoto
+        ssh -i ~/.ssh/id_internal_vm root@$VM_IP \
+            "hostnamectl set-hostname $name$i; hostname; \
+             echo '127.0.0.1 $name$i' >> /etc/hosts"
 
-	     VM_IP=""
-	done
+        VM_IP=""
+    done
 done
 
-MASTER_IP=$(  get-ip master1 )
-[ $HAS_LB -gt 0 ] && LB_IP=$(  get-ip load-balancer1 )
+# Obtener IP del master1
+MASTER_IP=$( get-ip master1 )
 
-if [ $HAS_LB -gt 0 ]
-then
-ssh -i ~/.ssh/id_internal_vm root@$MASTER_IP \
-     "curl -sfL https://get.k3s.io | sh -s - server --cluster-init --tls-san ${LB_IP}"
+# Obtener IP del load balancer si existe
+[ $HAS_LB -gt 0 ] && LB_IP=$( get-ip load-balancer1 )
+
+# Instalar K3s en master1
+if [ $HAS_LB -gt 0 ]; then
+    ssh -i ~/.ssh/id_internal_vm root@$MASTER_IP \
+        "curl -sfL https://get.k3s.io | sh -s - server --cluster-init --tls-san ${LB_IP}"
 else
-
-ssh -i ~/.ssh/id_internal_vm root@$MASTER_IP \
-     "curl -sfL https://get.k3s.io | sh -"
-
+    ssh -i ~/.ssh/id_internal_vm root@$MASTER_IP \
+        "curl -sfL https://get.k3s.io | sh -"
 fi
 
-while [ -z $TOKEN ]
-do
-
-TOKEN=$( ssh -i ~/.ssh/id_internal_vm root@$MASTER_IP \
-         "sudo cat /var/lib/rancher/k3s/server/node-token" )
-
+# Obtener token de cluster K3s para unir nodos
+while [ -z $TOKEN ]; do
+    TOKEN=$( ssh -i ~/.ssh/id_internal_vm root@$MASTER_IP \
+             "sudo cat /var/lib/rancher/k3s/server/node-token" )
 done
 
+# Configurar HAProxy si hay load balancer
+if [[ $HAS_LB > 0 ]]; then
 
-if [[ $HAS_LB > 0 ]]
-then
+    # Instalar HAProxy
+    ssh -i ~/.ssh/id_internal_vm root@$LB_IP "apt install haproxy -y"
 
-	ssh -i ~/.ssh/id_internal_vm root@$LB_IP "apt install haproxy -y"
+    # Configuración básica de HAProxy
+    config="frontend k3s-api
+        bind *:6443
+        default_backend k3s-masters
 
+    backend k3s-masters
+        balance roundrobin
+    "
 
-	config="frontend k3s-api
-	    bind *:6443
-	    default_backend k3s-masters
+    # Agregar cada master al backend de HAProxy
+    for i in $( seq 1 $NUM_MASTERS ); do
+        ip=$( get-ip master$i )
+        config+="    server master${i} ${ip}:6443 check
+"
+    done
 
-	backend k3s-masters
-	    balance roundrobin
-	"
+    # Mostrar configuración
+    echo "_____________________"
+    echo "$config"
+    echo "_____________________"
 
-	for i in $( seq 1 $NUM_MASTERS ); do
-	    ip=$(  get-ip master$i )
-	    config+="    server master${i} ${ip}:6443 check 
-	"
-	done
-
-	echo "_____________________"
-	echo "$config"
-	echo "_____________________"
-
-	ssh -i ~/.ssh/id_internal_vm root@$LB_IP \
-	    "cat > /etc/haproxy/haproxy.cfg" <<< "$config"
-
-
-	ssh -i ~/.ssh/id_internal_vm root@$LB_IP "sudo systemctl restart haproxy"
+    # Subir configuración al LB y reiniciar servicio
+    ssh -i ~/.ssh/id_internal_vm root@$LB_IP \
+        "cat > /etc/haproxy/haproxy.cfg" <<< "$config"
+    ssh -i ~/.ssh/id_internal_vm root@$LB_IP "sudo systemctl restart haproxy"
 
 fi
 
-NAMES=( master worker  )
+# Arreglos de nombres, cantidad y modos para unir nodos
+NAMES=( master worker )
 VALUES=( $NUM_MASTERS $NUM_WORKERS )
 MODES=( "-s - server" "-" )
 
+# Determinar IP a la que los nodos se unirán
 JOIN_IP=${LB_IP}
-
 [ $HAS_LB -eq 0 ] && JOIN_IP=$MASTER_IP
 
-for idx in {0..1}
-do
-        name=${NAMES[$idx]}
-	value=${VALUES[$idx]}
-	mode=${MODES[$idx]}
+# Unir nodos al cluster K3s
+for idx in {0..1}; do
+    name=${NAMES[$idx]}
+    value=${VALUES[$idx]}
+    mode=${MODES[$idx]}
 
-	for i in $( seq 1 $value )
-	do
-	     [[ ${name}${i} == "master1" ]] && continue
+    for i in $( seq 1 $value ); do
+        # Saltar master1 que ya está inicializado
+        [[ ${name}${i} == "master1" ]] && continue
 
-	     echo "=== joining host $name$i to cluster ==="
-	     while [ -z $VM_IP ]
-	     do 
-		VM_IP=$(  get-ip $name$i )
-		sleep 1
-	     done
+        echo "=== joining host $name$i to cluster ==="
 
-	     ssh -i ~/.ssh/id_internal_vm root@$VM_IP \
-		 "curl -sfL https://get.k3s.io | K3S_URL=https://${JOIN_IP}:6443 K3S_TOKEN=${TOKEN} sh ${mode}"
+        # Esperar a que la VM tenga IP
+        while [ -z $VM_IP ]; do 
+            VM_IP=$( get-ip $name$i )
+            sleep 1
+        done
 
-	     VM_IP=""
-	done
+        # Ejecutar script K3s para unir nodo al cluster
+        ssh -i ~/.ssh/id_internal_vm root@$VM_IP \
+            "curl -sfL https://get.k3s.io | K3S_URL=https://${JOIN_IP}:6443 K3S_TOKEN=${TOKEN} sh ${mode}"
+
+        VM_IP=""
+    done
 done
+

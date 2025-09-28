@@ -1,6 +1,12 @@
+# Heavy files
 *.iso
 template-backups/
+
+# Prototyping files
 red
 bootup
 cd-commands
 pendientes.txt
+
+# backups created during tests
+backup-*.tar

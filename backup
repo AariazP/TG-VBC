@@ -23,6 +23,20 @@ EOF
 
 
 upload_yaml master1  exporter_file.yaml
-ssh-vm master1 -c "kubectl cp exporter:/data ./backup"
+
+while [[ ` ssh-vm -r master1 -c "kubectl get pod/exporter" \
+	 | awk '/exporter/ {print $3}' ` != "Running" ]]
+do
+	sleep 1;
+done
+
+DATE=$( date +%Y-%m-%d-%H-%M-%S-%s )
+
+ssh-vm -r master1 -c "kubectl cp exporter:/data ./backup-${DATE}"
+ssh-vm -r master1 -c "kubectl delete pod/exporter"
+ssh-vm -r master1 -c "tar -cvf backup-${DATE}.tar ./backup-${DATE}"
+
+exec 2>/dev/null
+scp -i ~/.ssh/id_internal_vm root@$( get-ip master1 ):./backup-${DATE}.tar ./
 
 rm exporter_file.yaml

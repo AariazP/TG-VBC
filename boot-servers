@@ -1,20 +1,40 @@
 #!/bin/bash
 
+# ---------------------------------------------------------------
+# Script: boot-servers.sh
+# Descripción:
+#   Este script crea e inicia las máquinas virtuales principales 
+#   de red NAT en XCP-ng. Puede crear un servidor NAT principal 
+#   (Master) y, opcionalmente, un servidor de respaldo (Backup) 
+#   usando plantillas predefinidas.
+# ---------------------------------------------------------------
+
+# Variable que indica si se debe crear el servidor de backup
 BACKUP=0
 
+# Procesar opciones:
+#   -b  → crea el servidor NAT de backup adicional
 while getopts "b" opt; do
   case $opt in
-    b) BACKUP=1 ;;
+    b) BACKUP=1 ;;  # Activar creación del backup
     *) echo "Usage: $0 [-w NUM_WORKERS] [-m NUM_MASTERS] [-b NAT server backup?]" >&2
        exit 1 ;;
   esac
 done
 
-# instala master y backup a traves de una plantilla
+# Crear el servidor NAT principal (Master) a partir de la plantilla "nat-server"
 MASTER_UUID=$(xe vm-install template="nat-server" new-name-label="NAT-Master")
-[[ $BACKUP > 0 ]] && BACKUP_UUID=$(xe vm-install \
-		 template="nat-server" new-name-label="NAT-Backup")
 
+# Si se indicó la opción -b, crear también el servidor de backup
+[[ $BACKUP > 0 ]] && BACKUP_UUID=$(xe vm-install \
+     template="nat-server" new-name-label="NAT-Backup")
+
+# Iniciar la VM principal (Master)
 xe vm-start uuid=$MASTER_UUID
+
+# Esperar 2 segundos para dar tiempo a que arranque la Master
 sleep 2
+
+# Si se creó la VM de backup, iniciarla también
 [[ $BACKUP > 0 ]] && xe vm-start uuid=$BACKUP_UUID
+

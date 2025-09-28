@@ -1,28 +1,42 @@
 #!/bin/bash
 
-ROOT=0
-CMD=""
-VM=""
+# ---------------------------------------------------------------
+# Script: ssh-vm.sh
+# Descripción:
+#   Este script permite conectarse vía SSH a una máquina virtual 
+#   en XCP-ng usando su nombre como referencia. Se puede especificar:
+#   - Si la conexión debe hacerse como root.
+#   - Un comando a ejecutar de forma remota en la VM.
+# ---------------------------------------------------------------
 
-# First pass: get options until first non-option (the VM name)
+# Variables iniciales
+ROOT=0     # Indica si se usará el usuario root (1 = sí, 0 = no)
+CMD=""     # Comando opcional a ejecutar en la VM
+VM=""      # Nombre de la VM a la que se conectará
+
+# Procesar opciones iniciales: 
+#   -r  → usar root como usuario.
+#   -c  → comando a ejecutar.
 while getopts "rc:" opt; do
   case "$opt" in
-    r) ROOT=1 ;;
-    c) CMD="$OPTARG" ;;
+    r) ROOT=1 ;;                # Activar conexión como root
+    c) CMD="$OPTARG" ;;          # Guardar comando remoto
     *) echo "Usage: $0 [-r] <vm-name> [-c command]" >&2; exit 1 ;;
   esac
 done
-shift $((OPTIND - 1))
+shift $((OPTIND - 1))            # Avanzar en la lista de argumentos
 
-# Next argument should be the VM name
+# Validar que al menos se haya pasado el nombre de la VM
 if [ $# -lt 1 ]; then
   echo "Usage: $0 [-r] <vm-name> [-c command]" >&2
   exit 1
 fi
+
+# Guardar nombre de la VM y avanzar
 VM="$1"
 shift 1
 
-# Second pass: process any remaining options (like -c after VM name)
+# Reiniciar índice de opciones para procesar posibles parámetros -c después del nombre de la VM
 OPTIND=1
 while getopts "c:" opt; do
   case "$opt" in
@@ -31,18 +45,27 @@ while getopts "c:" opt; do
 done
 shift $((OPTIND - 1))
 
+# Obtener la dirección IP de la VM usando el script auxiliar `get-ip`
+# (debe estar en el PATH del sistema).
 IP=$( get-ip "$VM" 2>/dev/null )
 
+# Conexión SSH
 if [ "$ROOT" -eq 1 ]; then
+  # Si se especifica conexión como root
   if [ -n "$CMD" ]; then
+    # Ejecutar comando remoto como root
     ssh -i ~/.ssh/id_internal_vm root@"$IP" "$CMD" 2>/dev/null
   else
+    # Abrir sesión interactiva como root
     ssh -i ~/.ssh/id_internal_vm root@"$IP" 2>/dev/null
   fi
 else
+  # Conexión como usuario por defecto (depende de la configuración SSH de la VM)
   if [ -n "$CMD" ]; then
+    # Ejecutar comando remoto sin root
     ssh "$IP" "$CMD" 2>/dev/null
   else
+    # Abrir sesión interactiva sin root
     ssh "$IP" 2>/dev/null
   fi
 fi

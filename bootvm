@@ -1,12 +1,24 @@
 #!/bin/bash
 
+# ---------------------------------------------------------------
+# Script: bootvm.sh
+# Descripción:
+#   Este script crea e inicia una máquina virtual (VM) en XCP-ng 
+#   a partir de una plantilla predefinida, usando el nombre que 
+#   se le pase como argumento.
+# ---------------------------------------------------------------
+
+# Validar que se haya pasado al menos un argumento (nombre de la VM)
 if [ $# -lt 1 ]
 then
    echo "usage: bootvm <vm-name>"
    exit 0
 fi
 
-# instala una vm a partir de una plantilla
-VM_UUID=$(xe vm-install template=0c838875-cb93-dfe3-8c36-a2f42183b434 new-name-label="$1")
+# Crear la VM a partir de una plantilla específica (UUID de la plantilla)
+# y asignarle un nombre nuevo igual al argumento pasado
+VM_UUID=$(xe vm-install template=0c838875-cb93-dfe3-8c36-a2f42183b434 \
+           new-name-label="$1")
 
+# Iniciar la VM recién creada usando su UUID
 xe vm-start uuid=$VM_UUID
