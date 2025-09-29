@@ -43,9 +43,6 @@ do
 		;;
 	    
 	    "backup")
-		echo -ne "Ingrese el nodo: "
-		read nodo
-
 		backup_options=("backup para pvc" "backup para pod" "backup para nodo")
 		echo -e "\nSeleccione el tipo de backup:\n"
 		for i in "${!backup_options[@]}"; do
@@ -64,19 +61,19 @@ do
 			    echo -ne "Ingrese el pvc: "
 			    read pvc
 			    echo "Ejecutando: backup-pvc $nodo $pvc"
-			    backup-pvc "$nodo" "$pvc"
+			    backup "$pvc"
 			    ;;
 			"backup para pod")
 			    echo -ne "Ingrese el pod-route: "
 			    read pod_route
 			    echo "Ejecutando: backup-pod $nodo $pod_route"
-			    backup-pod "$nodo" "$pod_route"
+			    backup -p "$pod_route"
 			    ;;
 			"backup para nodo")
 			    echo -ne "Ingrese la carpeta: "
 			    read carpeta
 			    echo "Ejecutando: backup-nodo $nodo $carpeta"
-			    backup-nodo "$nodo" "$carpeta"
+			    backup -f "$carpeta"
 			    ;;
 		    esac
 		else
