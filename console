@@ -1,11 +1,104 @@
 #!/bin/bash
+clear
 
-cat banner.txt
+# Show banner
+while true
+do
+	cat banner.txt
 
-echo -e "Seleccione una opcion
-1: subir archivo
-2: limpiar cluster
-3: backup
-"
-read -n 1 opt
+	# Menu options
+	options=("subir archivo" "limpiar cluster" "backup" "crear vm" "ssh")
 
+	echo -e "Seleccione una opción:\n"
+	for i in "${!options[@]}"; do
+	    echo " $((i+1)): ${options[$i]}"
+	done
+
+	echo -ne "\nIngrese el número de su elección: "
+	read choice
+
+	# Validate input
+	if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#options[@]} )); then
+	    selected=${options[$((choice-1))]}
+	    echo -e "\nHas seleccionado: $choice -> $selected"
+	else
+	    echo -e "\nOpción inválida."
+	    exit 1
+	fi
+
+	# Handle selected option
+	case "$selected" in
+	    "subir archivo")
+		echo -ne "Ingrese el nodo: "
+		read node
+		echo -ne "Ingrese el archivo: "
+		read file
+		echo "Ejecutando: upload_yaml $node $file"
+		upload_yaml "$node" "$file"
+		;;
+	    
+	    "limpiar cluster")
+		echo "Ejecutando: clean-cluster"
+		clean-cluster
+		;;
+	    
+	    "backup")
+		echo -ne "Ingrese el nodo: "
+		read nodo
+
+		backup_options=("backup para pvc" "backup para pod" "backup para nodo")
+		echo -e "\nSeleccione el tipo de backup:\n"
+		for i in "${!backup_options[@]}"; do
+		    echo " $((i+1)): ${backup_options[$i]}"
+		done
+
+		echo -ne "\nIngrese el número de su elección: "
+		read backup_choice
+
+		if [[ "$backup_choice" =~ ^[0-9]+$ ]] && (( backup_choice >= 1 && backup_choice <= ${#backup_options[@]} )); then
+		    backup_selected=${backup_options[$((backup_choice-1))]}
+		    echo -e "\nHas seleccionado: $backup_selected"
+
+		    case "$backup_selected" in
+			"backup para pvc")
+			    echo -ne "Ingrese el pvc: "
+			    read pvc
+			    echo "Ejecutando: backup-pvc $nodo $pvc"
+			    backup-pvc "$nodo" "$pvc"
+			    ;;
+			"backup para pod")
+			    echo -ne "Ingrese el pod-route: "
+			    read pod_route
+			    echo "Ejecutando: backup-pod $nodo $pod_route"
+			    backup-pod "$nodo" "$pod_route"
+			    ;;
+			"backup para nodo")
+			    echo -ne "Ingrese la carpeta: "
+			    read carpeta
+			    echo "Ejecutando: backup-nodo $nodo $carpeta"
+			    backup-nodo "$nodo" "$carpeta"
+			    ;;
+		    esac
+		else
+		    echo -e "\nOpción de backup inválida."
+		    exit 1
+		fi
+		;;
+	    
+	    "crear vm")
+		echo -ne "Ingrese el nombre de la VM: "
+		read vm_name
+		echo "Ejecutando: bootvm $vm_name"
+		bootvm "$vm_name"
+		;;
+	    
+	    "ssh")
+		echo -ne "Ingrese el nombre de la VM: "
+		read vm_name
+		echo "Ejecutando: ssh-vm $vm_name"
+		ssh-vm "$vm_name"
+		;;
+	esac
+
+	clear
+done
