@@ -1,101 +1,88 @@
 #!/bin/bash
-clear
 
-# Show banner
-while true
-do
-	cat banner.txt
+BANNER=$( cat banner.txt)
 
-	# Menu options
-	options=("subir archivo" "limpiar cluster" "backup" "crear vm" "ssh")
+export NEWT_COLORS='
+root=white,blue'
 
-	echo -e "Seleccione una opción:\n"
-	for i in "${!options[@]}"; do
-	    echo " $((i+1)): ${options[$i]}"
-	done
+while true; do
+    # Main menu with whiptail
+    choice=$(whiptail --title "Menú Principal" \
+        --menu "$BANNER\nSeleccione una opción:" 30 62 10 \
+        "1" "Subir archivo" \
+        "2" "Limpiar cluster" \
+        "3" "Backup" \
+        "4" "Agregar VM al cluster" \
+        "5" "SSH" \
+        "6" "Inicializar cluster" \
+        "7" "Salir" \
+        3>&1 1>&2 2>&3)
 
-	echo -ne "\nIngrese el número de su elección: "
-	read choice
+    exitstatus=$?
+    if [ $exitstatus -ne 0 ] || [ "$choice" == "7" ]; then
+        echo "Saliendo..."
+        break
+    fi
 
-	# Validate input
-	if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#options[@]} )); then
-	    selected=${options[$((choice-1))]}
-	    echo -e "\nHas seleccionado: $choice -> $selected"
-	else
-	    echo -e "\nOpción inválida."
-	    exit 1
-	fi
+    case $choice in
+        "1")
+            node=$(whiptail --inputbox "Ingrese el nodo:" 10 60 3>&1 1>&2 2>&3)
+            file=$(whiptail --inputbox "Ingrese el archivo:" 10 60 3>&1 1>&2 2>&3)
+            echo "Ejecutando: upload_yaml $node $file"
+            upload_yaml "$node" "$file"
+            ;;
+        "2")
+            echo "Ejecutando: clean-cluster"
+            clean-cluster
+            ;;
+        "3")
+            backup_choice=$(whiptail --title "Opciones de Backup" \
+                --menu "Seleccione el tipo de backup:" 20 60 10 \
+                "1" "Backup para PVC" \
+                "2" "Backup para Pod" \
+                "3" "Backup para Nodo" \
+                3>&1 1>&2 2>&3)
 
-	# Handle selected option
-	case "$selected" in
-	    "subir archivo")
-		echo -ne "Ingrese el nodo: "
-		read node
-		echo -ne "Ingrese el archivo: "
-		read file
-		echo "Ejecutando: upload_yaml $node $file"
-		upload_yaml "$node" "$file"
-		;;
-	    
-	    "limpiar cluster")
-		echo "Ejecutando: clean-cluster"
-		clean-cluster
-		;;
-	    
-	    "backup")
-		backup_options=("backup para pvc" "backup para pod" "backup para nodo")
-		echo -e "\nSeleccione el tipo de backup:\n"
-		for i in "${!backup_options[@]}"; do
-		    echo " $((i+1)): ${backup_options[$i]}"
-		done
+            case $backup_choice in
+                "1")
+                    pvc=$(whiptail --inputbox "Ingrese el PVC:" 10 60 3>&1 1>&2 2>&3)
+                    echo "Ejecutando: backup-pvc $pvc"
+                    backup "$pvc"
+                    ;;
+                "2")
+                    pod_route=$(whiptail --inputbox "Ingrese el pod-route:" 10 60 3>&1 1>&2 2>&3)
+                    echo "Ejecutando: backup-pod $pod_route"
+                    backup -p "$pod_route"
+                    ;;
+                "3")
+                    carpeta=$(whiptail --inputbox "Ingrese la carpeta:" 10 60 3>&1 1>&2 2>&3)
+                    echo "Ejecutando: backup-nodo $carpeta"
+                    backup -f "$carpeta"
+                    ;;
+            esac
+            ;;
+        "4")
+            vm_name=$(whiptail --inputbox "Ingrese el nombre de la VM:" 10 60 3>&1 1>&2 2>&3)
+            echo "Ejecutando: bootvm -j $vm_name"
+            bootvm -j "$vm_name"
+            ;;
+        "5")
+            vm_name=$(whiptail --inputbox "Ingrese el nombre de la VM:" 10 60 3>&1 1>&2 2>&3)
+            echo "Ejecutando: ssh-vm $vm_name"
+            ssh-vm "$vm_name"
+            ;;
+        "6")
+            masters=$(whiptail --inputbox "Ingrese la cantidad de masters:" 10 60 3>&1 1>&2 2>&3)
+            workers=$(whiptail --inputbox "Ingrese la cantidad de workers:" 10 60 3>&1 1>&2 2>&3)
 
-		echo -ne "\nIngrese el número de su elección: "
-		read backup_choice
+	    nat_backup=$(whiptail --title "Opciones adicionales" \
+	       --checklist "Seleccione si desea agregar NAT-Backup:" 15 60 5 \
+	       "1" "Agregar NAT-Backup" OFF \
+	       3>&1 1>&2 2>&3 | tr -d '"')
+            [ $nat_backup -eq 1 ] && nat_backup="-b"
 
-		if [[ "$backup_choice" =~ ^[0-9]+$ ]] && (( backup_choice >= 1 && backup_choice <= ${#backup_options[@]} )); then
-		    backup_selected=${backup_options[$((backup_choice-1))]}
-		    echo -e "\nHas seleccionado: $backup_selected"
-
-		    case "$backup_selected" in
-			"backup para pvc")
-			    echo -ne "Ingrese el pvc: "
-			    read pvc
-			    echo "Ejecutando: backup-pvc $nodo $pvc"
-			    backup "$pvc"
-			    ;;
-			"backup para pod")
-			    echo -ne "Ingrese el pod-route: "
-			    read pod_route
-			    echo "Ejecutando: backup-pod $nodo $pod_route"
-			    backup -p "$pod_route"
-			    ;;
-			"backup para nodo")
-			    echo -ne "Ingrese la carpeta: "
-			    read carpeta
-			    echo "Ejecutando: backup-nodo $nodo $carpeta"
-			    backup -f "$carpeta"
-			    ;;
-		    esac
-		else
-		    echo -e "\nOpción de backup inválida."
-		    exit 1
-		fi
-		;;
-	    
-	    "crear vm")
-		echo -ne "Ingrese el nombre de la VM: "
-		read vm_name
-		echo "Ejecutando: bootvm $vm_name"
-		bootvm -j "$vm_name"
-		;;
-	    
-	    "ssh")
-		echo -ne "Ingrese el nombre de la VM: "
-		read vm_name
-		echo "Ejecutando: ssh-vm $vm_name"
-		ssh-vm "$vm_name"
-		;;
-	esac
-
-	clear
+            echo "Ejecutando: cluster-bootup -m $masters -w $workers $nat_backup"
+            cluster-bootup -m "$masters" -w "$workers" $nat_backup
+            ;;
+    esac
 done

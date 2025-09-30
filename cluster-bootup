@@ -170,3 +170,18 @@ for idx in {0..1}; do
     done
 done
 
+# The purpose of these commands is to allow XCP-host to connect to
+# vms in internal network, while also allowing vms to connect to internet
+ssh-vm -r NAT-Master -c "systemctl stop firewalld; \
+			 iptables -A FORWARD -i enX0 -o enX1 -j ACCEPT; \
+		         iptables -A FORWARD -i enX1 -o enX0 -m state --state ESTABLISHED,RELATED -j ACCEPT; \
+			 iptables -t nat -A POSTROUTING -o enX0 -j MASQUERADE;
+"
+
+
+ssh-vm -r NAT-Backup -c "systemctl stop firewalld; \
+			 iptables -A FORWARD -i enX0 -o enX1 -j ACCEPT; \
+		         iptables -A FORWARD -i enX1 -o enX0 -m state --state ESTABLISHED,RELATED -j ACCEPT; \
+			 iptables -t nat -A POSTROUTING -o enX0 -j MASQUERADE;
+"
+

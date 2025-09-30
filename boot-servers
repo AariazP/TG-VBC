@@ -23,7 +23,7 @@ while getopts "b" opt; do
 done
 
 
-TEMPLATE="nat-server"
+TEMPLATE="natserver7"
 # Crear el servidor NAT principal (Master) a partir de la plantilla "nat-server" si no existe ya
 MASTER=0
 xe vm-list | grep -vq "NAT-Master" && MASTER=1

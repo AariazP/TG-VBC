@@ -29,8 +29,8 @@ done
 
 # Si no se asumió "sí", pedir confirmación al usuario
 if [ "$ASSUME_YES" = false ]; then
-  read -p "Are you really sure you want to clean cluster. (y/N): " resp
-  [[ ! $resp =~ (y|Y|yes|Yes|YES) ]] && exit 0
+  read -p "Estas seguro de que quieres limpiar el cluster. (s/N): " resp
+  [[ ! $resp =~ (s|S|si|Si|SI) ]] && exit 0
 fi
 
 # Obtener lista de VMs a eliminar, excluyendo dominios del sistema
