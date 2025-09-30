@@ -1,8 +1,14 @@
 #!/bin/bash
 
 exec 2> /dev/null
-IP=$( get-ip "$1" )
-FILENAME=$( basename "$2" )
-scp -i ~/.ssh/id_internal_vm "$2" root@$IP:./
-ssh -i ~/.ssh/id_internal_vm root@$IP "kubectl apply -f  $FILENAME"
-ssh -i ~/.ssh/id_internal_vm root@$IP "rm  $FILENAME"
+
+NODE="$1"
+shift   # remove node name from arguments
+
+IP=$( get-ip "$NODE" )
+
+for FILE in "$@"; do
+    FILENAME=$( basename "$FILE" )
+    scp -i ~/.ssh/id_internal_vm "$FILE" root@$IP:./
+    ssh -i ~/.ssh/id_internal_vm root@$IP "kubectl apply -f $FILENAME && rm $FILENAME"
+done

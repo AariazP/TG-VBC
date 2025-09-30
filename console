@@ -86,7 +86,7 @@ do
 		echo -ne "Ingrese el nombre de la VM: "
 		read vm_name
 		echo "Ejecutando: bootvm $vm_name"
-		bootvm "$vm_name"
+		bootvm -j "$vm_name"
 		;;
 	    
 	    "ssh")

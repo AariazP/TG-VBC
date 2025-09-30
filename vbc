@@ -1,7 +1,5 @@
 #!/bin/bash
 
-#vm, cluster, kubectl, console
-
 set -euo pipefail
 
 # Usage helper
@@ -44,7 +42,7 @@ case "$DOMAIN" in
     case "$SUBCMD" in
       create)   cluster-bootup "$@" ;;
       clean)    clean-cluster "$@" ;;
-      upload)   upload_yaml "$@" ;;
+      upload)   upload_yaml master1 "$@" ;;
       backup)   backup "$@" ;;
       *) echo "Unknown cluster subcommand: $SUBCMD"; usage ;;
     esac

@@ -3,22 +3,121 @@
 # ---------------------------------------------------------------
 # Script: bootvm.sh
 # Descripción:
-#   Este script crea e inicia una máquina virtual (VM) en XCP-ng 
-#   a partir de una plantilla predefinida, usando el nombre que 
-#   se le pase como argumento.
+#   Crea e inicia una VM en XCP-ng y opcionalmente la une a un
+#   cluster de K3s como master o worker.
 # ---------------------------------------------------------------
 
-# Validar que se haya pasado al menos un argumento (nombre de la VM)
-if [ $# -lt 1 ]
-then
-   echo "usage: bootvm <vm-name>"
-   exit 0
+JOIN=0
+VM_NAME=""
+
+# Parse options
+while getopts "j" opt; do
+  case $opt in
+    j) JOIN=1 ;;
+    *) echo "usage: $0 [-j]  <vm-name>" >&2; exit 1 ;;
+  esac
+done
+shift $((OPTIND -1))
+
+# VM name is required
+if [ $# -lt 1 ]; then
+   echo "usage: $0 [-j] <vm-name>"
+   exit 1
 fi
 
-# Crear la VM a partir de una plantilla específica (UUID de la plantilla)
-# y asignarle un nombre nuevo igual al argumento pasado
-VM_UUID=$(xe vm-install template=0c838875-cb93-dfe3-8c36-a2f42183b434 \
-           new-name-label="$1")
 
-# Iniciar la VM recién creada usando su UUID
+VM_NAME="$1"
+
+echo $VM_NAME | grep -q master && ROLE="master" && MODE="-s - server"
+echo $VM_NAME | grep -q worker && ROLE="worker" && MODE="-"
+
+#if [ -z $ROLE ]
+#then
+#   echo "vm should be named master* or worker*"
+#   exit 1
+#fi
+
+# Create VM
+VM_UUID=$(xe vm-install template=0c838875-cb93-dfe3-8c36-a2f42183b434 \
+           new-name-label="$VM_NAME")
 xe vm-start uuid=$VM_UUID
+
+
+# Handle cluster join
+if [ $JOIN -eq 1 ]; then
+  while ! get-ip $VM_NAME | grep 192
+  do
+    sleep 1
+  done
+
+  VM_IP=$( get-ip "$VM_NAME" )
+  ssh-vm -r "$VM_NAME" -c "hostnamectl set-hostname $VM_NAME; hostname; \
+             echo '127.0.0.1 $VM_NAME' >> /etc/hosts"
+  TOKEN=$( ssh-vm -r master1 -c "cat /var/lib/rancher/k3s/server/node-token" )
+  echo "[INFO] Preparing to join VM '$VM_NAME' as $ROLE to k3s cluster..."
+
+  # Detect cluster masters (replace with your own detection logic)
+  MASTERS=($( get-vm | grep master | tr -d '\n'))
+  MASTER_COUNT=${#MASTERS[@]}
+  if [ $MASTER_COUNT -eq 1 ]; then
+    JOIN_IP=$( get-ip "${MASTERS[0]}" )
+    echo "[INFO] Cluster has 1 master, will join using master IP: $JOIN_IP"
+    MASTER_IP=$( get-ip master1 )
+    if [ "$ROLE" = "master" ]; then
+      bootvm load-balancer1
+
+      LB_IP=$( get-ip load-balancer1 )
+      ssh-vm -r master1 -c \
+          "curl -sfL https://get.k3s.io | sh -s - server --cluster-init --tls-san ${LB_IP}"
+       
+      # Instalar HAProxy
+      ssh-vm -r load-balancer1 -c "apt install haproxy -y"
+      
+      # Configuración básica de HAProxy
+      config="frontend k3s-api
+          bind *:6443
+          default_backend k3s-masters
+      
+      backend k3s-masters
+          balance roundrobin
+	  server master1 ${JOIN_IP}:6443 check
+      "      
+      
+      # Subir configuración al LB y reiniciar servicio
+      ssh-vm -r load-balancer1 -c "cat > /etc/haproxy/haproxy.cfg" <<< "$config"
+      ssh-vm -r load-balancer1 -c "sudo systemctl restart haproxy"
+
+      echo "[INFO] Adding a new master, cluster requires load balancer..."
+      echo "[INFO] Creating load balancer VM at $LB_IP"
+      JOIN_IP="$LB_IP"
+    fi
+
+  else
+    # Assume LB is already there
+    LB_IP=$( get-ip load-balancer1 )
+    JOIN_IP="$LB_IP"
+    echo "[INFO] Cluster has multiple masters, joining via LB: $JOIN_IP"
+  fi
+  echo ++++++++++++++++++ joining ++++++++
+  ssh -i ~/.ssh/id_internal_vm root@"$VM_IP" "curl -sfL https://get.k3s.io | K3S_URL=https://$JOIN_IP:6443 K3S_TOKEN=${TOKEN} sh ${MODE}"
+
+  [[ "$ROLE" == "worker" ]] && exit $?
+
+  if get-vm | grep -q load-balancer1
+  then
+     config=$( ssh-vm -r load-balancer1 -c "cat /etc/haproxy/haproxy.cfg" )
+     config+="
+     server ${VM_NAME} ${VM_IP}:6443 check
+" 
+     echo "________________________"
+     echo $config
+     echo "________________________"
+     echo "$config" > /tmp/haproxy.cfg.tmp
+
+     scp -i ~/.ssh/id_internal_vm /tmp/haproxy.cfg.tmp \
+              root@$( get-ip load-balancer1):/etc/haproxy/haproxy.cfg
+
+     ssh-vm -r load-balancer1 -c "sudo systemctl restart haproxy"
+
+  fi
+fi
