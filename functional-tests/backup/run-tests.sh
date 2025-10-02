@@ -17,12 +17,16 @@ do
    sleep 1
 done
 
-ssh-vm -r master1 -c "kubectl exec writer-pod -- sh -c 'echo functional test for backup > /data/dummy_file.txt'"
 echo "====== backing up for pvc ======="
+ssh-vm -r master1 -c "kubectl exec writer-pod -- sh -c 'echo functional test for backup in a pvc > /data/dummy_file_pvc.txt'"
 backup nginx-pvc
 
 
 echo "====== backing up for pod ======="
-
 ssh-vm -r master1 -c "kubectl exec writer-pod -- sh -c 'echo functional test for backup in a pod > /data/dummy_file_pod.txt'"
 backup -p writer-pod:/data
+
+
+echo "====== backing up for node ======="
+ssh-vm -r master1 -c "mkdir ./dummy_dir; echo 'functional test for backup in a node folder' > ./dummy_dir/dummy_file_node.txt"
+backup -f master1:./dummy_dir

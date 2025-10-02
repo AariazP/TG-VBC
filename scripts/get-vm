@@ -1,17 +1,21 @@
 #!/bin/bash
 
 CHECK_ALL=0
-while getopts "ap:" opt; do
+LIMIT=0
+
+while getopts "ap:n:" opt; do
   case $opt in
     a) CHECK_ALL=1 ;;
-    p) ssh-vm NAT-Master -c "ping -c 1 $( get-ip $OPTARG )"
-       exit $?;;
-    *) echo "Usage: $0 [-a] [-p vm_name]" >&2
+    p) ssh-vm NAT-Master -c "timeout 3 ping -c 1 $( get-ip $OPTARG )"
+       exit $? ;;
+    n) LIMIT=$OPTARG ;;
+    *) echo "Usage: $0 [-a] [-p vm_name] [-n X]" >&2
        exit 1 ;;
   esac
 done
 
 # the function of this script is listing vms and checking which ones are alive
+shift $((OPTIND - 1)) # shift parsed options
 PATTERN=${1:-""}
 [[ $PATTERN == "-a" ]] && PATTERN=${2:-""}
 
@@ -19,9 +23,16 @@ VMS=$( xe vm-list | grep name-label | grep -v "Control domain" | grep "${PATTERN
 
 if [ $CHECK_ALL -eq 1 ]
 then
+   COUNT=0
    for vm in $VMS
    do
-    get-vm -p $vm 1>/dev/null && echo $vm 
+      if timeout 3 get-vm -p "$vm" 1>/dev/null; then
+         echo "$vm"
+         COUNT=$((COUNT+1))
+         if [ $LIMIT -gt 0 ] && [ $COUNT -ge $LIMIT ]; then
+            break
+         fi
+      fi
    done
 else
    echo "$VMS"

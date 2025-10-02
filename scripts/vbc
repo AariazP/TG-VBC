@@ -42,14 +42,14 @@ case "$DOMAIN" in
     case "$SUBCMD" in
       create)   cluster-bootup "$@" ;;
       clean)    clean-cluster "$@" ;;
-      upload)   upload_yaml master1 "$@" ;;
+      upload)   upload_yaml $( get-vm -a -n 1 master ) "$@" ;;
       backup)   backup "$@" ;;
       *) echo "Unknown cluster subcommand: $SUBCMD"; usage ;;
     esac
     ;;
 
   kubectl)
-    ssh-vm -r $( get-vm -a master | head -n 1 ) -c "kubectl $SUBCMD $@"
+    ssh-vm -r $( get-vm -a -n 1 master ) -c "kubectl $SUBCMD $@"
     ;;
 
   console)

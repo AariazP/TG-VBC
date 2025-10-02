@@ -37,7 +37,13 @@ while true; do
     case $choice in
         "1")
             node=$(whiptail --inputbox "Ingrese el nodo:" 10 60 3>&1 1>&2 2>&3)
+
+	    [ $? -ne 0 ] && continue
+
             file=$(whiptail --inputbox "Ingrese el archivo:" 10 60 3>&1 1>&2 2>&3)
+
+	    [ $? -ne 0 ] && continue
+
             echo "Ejecutando: upload_yaml $node $file"
             upload_yaml "$node" "$file"
             ;;
@@ -53,19 +59,24 @@ while true; do
                 "3" "Backup para Nodo" \
                 3>&1 1>&2 2>&3)
 
+	    [ $? -ne 0 ] && continue
+
             case $backup_choice in
                 "1")
                     pvc=$(whiptail --inputbox "Ingrese el PVC:" 10 60 3>&1 1>&2 2>&3)
+		    [ $? -ne 0 ] && continue
                     echo "Ejecutando: backup-pvc $pvc"
                     backup "$pvc"
                     ;;
                 "2")
                     pod_route=$(whiptail --inputbox "Ingrese el pod-route:" 10 60 3>&1 1>&2 2>&3)
+		    [ $? -ne 0 ] && continue
                     echo "Ejecutando: backup-pod $pod_route"
                     backup -p "$pod_route"
                     ;;
                 "3")
                     carpeta=$(whiptail --inputbox "Ingrese la carpeta:" 10 60 3>&1 1>&2 2>&3)
+		    [ $? -ne 0 ] && continue
                     echo "Ejecutando: backup-nodo $carpeta"
                     backup -f "$carpeta"
                     ;;
@@ -73,22 +84,28 @@ while true; do
             ;;
         "4")
             vm_name=$(whiptail --inputbox "Ingrese el nombre de la VM:" 10 60 3>&1 1>&2 2>&3)
+	    [ $? -ne 0 ] && continue
             echo "Ejecutando: bootvm -j $vm_name"
             bootvm -j "$vm_name"
             ;;
         "5")
             vm_name=$(whiptail --inputbox "Ingrese el nombre de la VM:" 10 60 3>&1 1>&2 2>&3)
+	    [ $? -ne 0 ] && continue
             echo "Ejecutando: ssh-vm $vm_name"
             ssh-vm "$vm_name"
             ;;
         "6")
             masters=$(whiptail --inputbox "Ingrese la cantidad de masters:" 10 60 3>&1 1>&2 2>&3)
+	    [ $? -ne 0 ] && continue
             workers=$(whiptail --inputbox "Ingrese la cantidad de workers:" 10 60 3>&1 1>&2 2>&3)
-
+	    [ $? -ne 0 ] && continue
 	    nat_backup=$(whiptail --title "Opciones adicionales" \
 	       --checklist "Seleccione si desea agregar NAT-Backup:" 15 60 5 \
 	       "1" "Agregar NAT-Backup" OFF \
-	       3>&1 1>&2 2>&3 | tr -d '"')
+	       3>&1 1>&2 2>&3 )
+
+	    [ $? -ne 0 ] && continue
+
             [ $nat_backup -eq 1 ] && nat_backup="-b"
 
             echo "Ejecutando: cluster-bootup -m $masters -w $workers $nat_backup"

@@ -53,7 +53,7 @@ if [ $JOIN -eq 1 ]; then
   VM_IP=$( get-ip "$VM_NAME" )
   ssh-vm -r "$VM_NAME" -c "hostnamectl set-hostname $VM_NAME; hostname; \
              echo '127.0.0.1 $VM_NAME' >> /etc/hosts"
-  TOKEN=$( ssh-vm -r master1 -c "cat /var/lib/rancher/k3s/server/node-token" )
+  TOKEN=$( ssh-vm -r `get-vm -a -n 1 master` -c "cat /var/lib/rancher/k3s/server/node-token" )
   echo "[INFO] Preparing to join VM '$VM_NAME' as $ROLE to k3s cluster..."
 
   # Detect cluster masters (replace with your own detection logic)

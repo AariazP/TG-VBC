@@ -16,7 +16,7 @@ while getopts "p:f:" opt; do
 done
 shift $((OPTIND-1))
 
-NODE="$( get-vm -a master | head -n 1 )"
+NODE="$( get-vm -a -n 1 master )"
 
 PVC="$1"
 DATE=$( date +%Y-%m-%d-%H-%M-%S-%s )
@@ -47,24 +47,27 @@ EOF
   while [[ $(ssh-vm -r ${NODE} -c "kubectl get pod/exporter -o jsonpath='{.status.phase}'") != "Running" ]]; do
     sleep 1
   done
-
+  FILENAME="/tmp/backup-${DATE}-pvc.tar"
   ssh-vm -r ${NODE} -c "kubectl cp exporter:/data ./backup-${DATE}"
   ssh-vm -r ${NODE} -c "kubectl delete pod/exporter"
-  ssh-vm -r ${NODE} -c "tar -cvf backup-${DATE}.tar ./backup-${DATE}"
+  ssh-vm -r ${NODE} -c "tar -cvf ${FILENAME} ./backup-${DATE}"
 
 elif [[ "$MODE" == "pod" ]]; then
+  FILENAME="/tmp/backup-${DATE}-pod.tar"
   # --- backup arbitrary path from pod ---
   ssh-vm -r ${NODE} -c "kubectl cp ${POD} ./backup-${DATE}"
-  ssh-vm -r ${NODE} -c "tar -cvf backup-${DATE}.tar ./backup-${DATE}"
+  ssh-vm -r ${NODE} -c "tar -cvf ${FILENAME} ./backup-${DATE}"
 
 elif [[ "$MODE" == "folder" ]]; then
+  FILENAME="/tmp/backup-${DATE}-node.tar"
   # --- backup arbitrary folder from node ---
-  ssh-vm -r ${NODE} -c "tar -cvf /tmp/backup-${DATE}.tar -C / ${FOLDER}"
-  scp -i ~/.ssh/id_internal_vm root@$(get-ip ${NODE}):/tmp/backup-${DATE}.tar ./
-  exit 0
+  NODE=$( echo $FOLDER | cut -d":" -f1 )
+  FOLDER=$( echo $FOLDER | cut -d":" -f2 ) 
+  echo "++++++ $NODE ++++ $FOLDER +++"
+  ssh-vm -r ${NODE} -c "tar -cvf ${FILENAME} ${FOLDER}"
 fi
 
 exec 2>/dev/null
-scp -i ~/.ssh/id_internal_vm root@$(get-ip ${NODE}):./backup-${DATE}.tar ./
+scp -i ~/.ssh/id_internal_vm root@$(get-ip ${NODE}):"${FILENAME}" ./
 
 rm -f exporter_file.yaml
