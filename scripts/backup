@@ -11,7 +11,7 @@ FOLDER=""
 while getopts "p:f:" opt; do
   case "$opt" in
     p) MODE="pod"; POD="$OPTARG" ;;     # backup from pod:path
-    f) MODE="folder"; FOLDER="$OPTARG" ;; # backup from host path
+    f) MODE="folder"; FOLDER="$OPTARG" ;; # backup from host:path
   esac
 done
 shift $((OPTIND-1))
@@ -22,7 +22,7 @@ PVC="$1"
 DATE=$( date +%Y-%m-%d-%H-%M-%S-%s )
 
 if [[ "$MODE" == "pvc" ]]; then
-  # --- current PVC backup flow ---
+  # --- backup for an specific pv ---
   cat <<EOF > exporter_file.yaml
 apiVersion: v1
 kind: Pod
@@ -63,7 +63,6 @@ elif [[ "$MODE" == "folder" ]]; then
   # --- backup arbitrary folder from node ---
   NODE=$( echo $FOLDER | cut -d":" -f1 )
   FOLDER=$( echo $FOLDER | cut -d":" -f2 ) 
-  echo "++++++ $NODE ++++ $FOLDER +++"
   ssh-vm -r ${NODE} -c "tar -cvf ${FILENAME} ${FOLDER}"
 fi
 

@@ -1,0 +1,39 @@
+.\" Manpage for ssh-vm
+.TH SSH-VM 1 "Octubre 2025" "1.0" "Comandos de usuario"
+.SH NOMBRE
+ssh-vm \- utilidad para conectarse a las vms a traves de ssh
+.SH SINOPSIS
+.B ssh-vm [\fB-r\fR] [\fB-c <command>\fR] \fB<vm-name>\fR
+.br
+
+.SH DESCRIPCION
+\fBssh-vm\fR utilidad para conectarse a las vms y ejecutar comandos en ellas.
+.SH OPCIONES
+.TP
+\fB-r\fR
+ejecuta el comando como root
+.br
+.TP 
+\fB-c\fR \fI<command>\fR
+ejecuta un comando en vez de loguearse en la vm
+.SH EJEMPLOS
+.TP
+loguearse como usuario normal en la vm master1
+.br
+.TP
+	$ ssh-vm master1
+.TP
+loguearse como root en la vm master1
+.br
+.TP
+	$ ssh-vm -r master1
+.TP
+ejecuta el comando "systemctl status k3s" como root en master1
+.br
+.TP
+	$ ssh-vm -r master1 -c "systemctl status k3s"
+.SH AUTORES
+.TP
+Anubis Correa
+.TP
+José Alejandro Arias

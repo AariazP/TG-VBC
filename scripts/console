@@ -12,11 +12,12 @@ BANNER="┌───────────────────────
 └───────────────────────────────────────────────────────┘
 "
 
+#Configuraciones de color
 export NEWT_COLORS='
 root=white,blue'
 
 while true; do
-    # Main menu with whiptail
+    # Menu principal de whiptail
     choice=$(whiptail --title "Menú Principal" \
         --menu "$BANNER\nSeleccione una opción:" 30 62 10 \
         "1" "Subir archivo" \

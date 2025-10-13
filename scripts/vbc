@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-# Usage helper
 usage() {
     echo "Usage: vbc <domain> <subcommand> [args...]"
     echo

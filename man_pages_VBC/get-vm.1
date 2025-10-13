@@ -1,0 +1,50 @@
+.\" Manpage for get-vm
+.TH GET-VM 1 "Octubre 2025" "1.0" "Comandos de usuario"
+.SH NOMBRE
+get-vm \- utilidad para listar las vms
+.SH SINOPSIS
+.B get-vm [\fB-p|-a\fR] [\fB-n <limit>\fR] \fB<vm-name-pattern>\fR
+.br
+
+.SH DESCRIPCION
+\fBget-vm\fR utilidad para obtener listar las vms del cluster
+.SH OPCIONES
+.TP
+\fB-p\fR \fI<vm-name>\fR
+hace una peticion ping a la vm especificada
+.br
+.TP 
+\fB-a\fR \fI<vm-name>\fR
+determina la cantidad de vms que contienen el patron <vm-name> en sus nombres y que adicionalmente esten activas.
+.SH EJEMPLOS
+.TP
+lista todas las vms
+.br
+.TP
+	$ get-vm
+.TP
+lista todas las vms activas
+.br
+.TP
+	$ get-vm -a
+.TP
+lista todas las vms que contienen la cadena worker en sus nombres
+.br
+.TP
+	$ get-vm worker
+.TP
+hace una prueba ping a la vm master1
+.br
+.TP
+	$ get-vm -p master1
+
+.TP
+lista las primeras 2 vms que esten activas y contengan la cadena master en sus nombres
+.br
+.TP
+	$ get-vm -a -n 2 master
+.SH AUTORES
+.TP
+Anubis Correa
+.TP
+José Alejandro Arias

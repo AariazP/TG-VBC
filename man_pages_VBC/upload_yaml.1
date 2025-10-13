@@ -1,0 +1,20 @@
+.\" Manpage for upload_yaml
+.TH UPLOAD_YAML 1 "Octubre 2025" "1.0" "Comandos de usuario"
+.SH NOMBRE
+upload_yaml \- utilidad para subir archivos .yaml de kubernetes y ejecutarlos automaticamente
+.SH SINOPSIS
+.B upload_yaml <nodo> <archivo.yaml>
+.br
+.SH DESCRIPCION
+\fBupload_yaml\fR utilidad para ejecutar recursos de kubernetes en archivos .yaml
+.SH EJEMPLOS
+.TP
+sube un archivos llamado nginx-deployment.yaml en el nodo master1
+.br
+.TP
+	$ upload_yaml master1 nginx-deployment.yaml
+.SH AUTORES
+.TP
+Anubis Correa
+.TP
+José Alejandro Arias

@@ -1,0 +1,32 @@
+.\" Manpage for bootvm
+.TH BOOTVM 1 "Octubre 2025" "1.0" "Comandos de usuario"
+.SH NOMBRE
+bootvm \- utilidad para iniciar una maquina virtual
+.SH SINOPSIS
+.B bootvm \fINOMBRE\fR
+.br
+.B boot-servers [\fB -j \fR] (master|worker)<nombre>
+
+.SH DESCRIPCION
+\fBbootvm\fR utilidad para iniciar una vm cualquiera, en conjunto con la opcion -j es capaz de unir la vm a un cluster iniciado con el comand cluster-bootup, para ello el nombre de la vm debe iniciar con la cadena master o worker
+.SH OPCIONES
+.TP
+\fB-j\fR 
+.TP
+	unir la vm al cluster
+.SH EJEMPLOS
+.TP
+crea la vm generic 
+.br
+.TP
+	$ bootvm generic
+.TP
+une la vm workerPrueba al cluster
+.br
+.TP
+	$ bootvm -j workerPrueba
+.SH AUTORES
+.TP
+Anubis Correa
+.TP
+José Alejandro Arias

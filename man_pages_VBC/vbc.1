@@ -1,0 +1,106 @@
+.\" Manual page for vbc
+.TH VBC 1 "Octubre 2025" "vbc 1.0" "Herramientas de Virtualización por Contenedores"
+.SH NOMBRE
+vbc \- herramienta unificada para gestionar entornos virtualizados y clústeres
+.SH SYNOPSIS
+.B vbc
+.I <domain>
+.I <subcommand>
+[\fIargs...\fR]
+.SH DESCRIPCION
+\fBvbc\fR es una utilidad de línea de comandos diseñada para facilitar la gestión de entornos de virtualización basados en contenedores (VBC).
+Permite crear, listar y acceder a máquinas virtuales, así como crear y limpiar clústeres Kubernetes y ejecutar comandos dentro de ellos.
+
+El comando se estructura en dominios y subcomandos.  
+Cada dominio representa un ámbito funcional diferente (por ejemplo, máquinas virtuales o clústeres).
+
+.SH DOMINIOS
+.TP
+.B vm
+Operaciones sobre máquinas virtuales.  
+Subcomandos:
+.RS
+.TP
+.B create
+Crea una máquina virtual.
+.TP
+.B ping
+Comprueba la conectividad con una máquina virtual.
+.TP
+.B list
+Lista las máquinas virtuales disponibles.
+.TP
+.B ssh
+Inicia una sesión SSH hacia una máquina virtual.
+.TP
+.B get-ip
+Obtiene la dirección IP de una máquina virtual.
+.RE
+
+.TP
+.B cluster
+Operaciones sobre clústeres de Kubernetes.  
+Subcomandos:
+.RS
+.TP
+.B create
+Inicializa un clúster con las máquinas virtuales definidas.
+.TP
+.B clean
+Elimina un clúster previamente creado.
+.TP
+.B upload
+Carga archivos YAML a un nodo maestro del clúster.
+.TP
+.B backup
+Realiza una copia de seguridad de los volúmenes persistentes del clúster.
+.RE
+
+.TP
+.B kubectl
+Pasa comandos directamente al cliente \fBkubectl\fR dentro del nodo maestro del clúster.
+No tiene subcomandos propios.
+
+.TP
+.B console
+Abre la consola del sistema de virtualización.
+
+.SH OPCIONES
+Actualmente, \fBvbc\fR no define opciones globales.  
+Las opciones se pasan directamente a los subcomandos respectivos según el dominio.
+
+.SH EJEMPLOS
+.TP
+vbc vm list
+Lista todas las máquinas virtuales activas.
+.TP
+vbc vm ssh master
+Accede vía SSH a la máquina virtual llamada \fImaster\fR.
+.TP
+vbc cluster create
+Crea un clúster Kubernetes.
+.TP
+vbc cluster clean
+Elimina el clúster existente y sus recursos asociados.
+.TP
+vbc kubectl get pods -A
+Ejecuta \fBkubectl get pods -A\fR dentro del nodo maestro del clúster.
+
+.SH ARCHIVOS
+No requiere archivos de configuración adicionales, pero depende de utilidades auxiliares como:
+.RS
+.TP
+.B bootvm, get-vm, ssh-vm, get-ip, cluster-bootup, clean-cluster
+.RE
+
+.SH ESTADOS DE SALIDA
+Devuelve 0 en caso de éxito, y un código distinto de 0 si ocurre un error.
+
+.SH AUTORES
+Anubis Correa.
+.TP
+José Alejandro Arias.
+
+.SH SEE ALSO
+bash(1), kubectl(1), ssh(1)
+

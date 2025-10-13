@@ -14,26 +14,29 @@ while getopts "ap:n:" opt; do
   esac
 done
 
-# the function of this script is listing vms and checking which ones are alive
-shift $((OPTIND - 1)) # shift parsed options
+shift $((OPTIND - 1)) 
 PATTERN=${1:-""}
 [[ $PATTERN == "-a" ]] && PATTERN=${2:-""}
 
 VMS=$( xe vm-list | grep name-label | grep -v "Control domain" | grep "${PATTERN}" | cut -d":" -f2 )
 
-if [ $CHECK_ALL -eq 1 ]
-then
-   COUNT=0
-   for vm in $VMS
-   do
-      if timeout 3 get-vm -p "$vm" 1>/dev/null; then
-         echo "$vm"
-         COUNT=$((COUNT+1))
-         if [ $LIMIT -gt 0 ] && [ $COUNT -ge $LIMIT ]; then
-            break
-         fi
-      fi
-   done
-else
-   echo "$VMS"
-fi
+COUNT=0
+for vm in $VMS
+do
+    if [ $CHECK_ALL -eq 1 ]
+    then
+	    if timeout 3 get-vm -p "$vm" 1>/dev/null; then
+	       echo "$vm"
+	       COUNT=$((COUNT+1))
+	       if [ $LIMIT -gt 0 ] && [ $COUNT -ge $LIMIT ]; then
+		  break
+	       fi
+	    fi
+    else
+	    echo "$vm"
+	    COUNT=$((COUNT+1))
+	    if [ $LIMIT -gt 0 ] && [ $COUNT -ge $LIMIT ]; then
+		  break
+	    fi
+    fi
+done

@@ -1,0 +1,47 @@
+.\" Manpage for backup
+.TH BACKUP 1 "Octubre 2025" "1.0" "Comandos de usuario"
+.SH NOMBRE
+backup \- utilidad para realizar backups
+.SH SINOPSIS
+.B backup
+.I NOMBRE_PVC
+.br
+.B backup
+[\fB-p\fR \fI<pod>:<path>\fR]
+.br
+.B backup
+[\fB-f\fR \fI<nodo>:<path>\fR]
+
+.SH DESCRIPCION
+\fBbackup\fR utilidad para realizar backups en el cluster, se puede realizar backups a volumenes físicos de kubernets, a pods o a nodos en una carpeta específicio
+.SH OPCIONES
+.TP
+\fB-p\fR \fI<pod>:<path>\fR
+realiza un backup a <pod> en la carpeta <path>.
+.br
+.TP 
+\fB-f\fR \fI<nodo>:<path>\fR
+realiza un backup a <nodo> en la carpeta <path>.
+.SH EJEMPLOS
+.TP
+realizar un backup del volumen nginx-pv a traves del pvc nginx-pvc
+.br
+.TP
+	$ backup nginx-pvc
+.TP
+realizar un backup del pod nginx-deployment-55d67f7b54-7tbgn en la carpeta /data
+.br
+.TP
+	$ backup nginx-deployment-55d67f7b54-7tbgn:/data
+
+.TP
+realizar un backup del nodo master1 en la carpeta /etc
+.br
+.TP
+	$ backup master1:/etc
+
+.SH AUTORES
+.TP
+Anubis Correa
+.TP
+José Alejandro Arias

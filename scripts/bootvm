@@ -10,7 +10,7 @@
 JOIN=0
 VM_NAME=""
 
-# Parse options
+# Escanea opciones
 while getopts "j" opt; do
   case $opt in
     j) JOIN=1 ;;
@@ -19,9 +19,9 @@ while getopts "j" opt; do
 done
 shift $((OPTIND -1))
 
-# VM name is required
+# El nombre de la VM es requerido
 if [ $# -lt 1 ]; then
-   echo "usage: $0 [-j] <vm-name>"
+   echo "uso: $0 [-j] <vm-name>"
    exit 1
 fi
 
@@ -31,19 +31,15 @@ VM_NAME="$1"
 echo $VM_NAME | grep -q master && ROLE="master" && MODE="-s - server"
 echo $VM_NAME | grep -q worker && ROLE="worker" && MODE="-"
 
-#if [ -z $ROLE ]
-#then
-#   echo "vm should be named master* or worker*"
-#   exit 1
-#fi
 
-# Create VM
+# Crea la VM
 VM_UUID=$(xe vm-install template=0c838875-cb93-dfe3-8c36-a2f42183b434 \
            new-name-label="$VM_NAME")
 xe vm-start uuid=$VM_UUID
 
 
-# Handle cluster join
+# uno la vm al cluster en caso de que se use
+# la opcion -j
 if [ $JOIN -eq 1 ]; then
   while ! get-ip $VM_NAME | grep 192
   do
@@ -56,7 +52,7 @@ if [ $JOIN -eq 1 ]; then
   TOKEN=$( ssh-vm -r `get-vm -a -n 1 master` -c "cat /var/lib/rancher/k3s/server/node-token" )
   echo "[INFO] Preparing to join VM '$VM_NAME' as $ROLE to k3s cluster..."
 
-  # Detect cluster masters (replace with your own detection logic)
+  # Detecta los masters del cluster
   MASTERS=($( get-vm | grep master | tr -d '\n'))
   MASTER_COUNT=${#MASTERS[@]}
   if [ $MASTER_COUNT -eq 1 ]; then

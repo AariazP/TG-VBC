@@ -6,12 +6,7 @@ Host 172.30.29.2 172.30.29.3
     User debian
     IdentityFile ~/.ssh/id_nat_server
 
-Host natserver
-    HostName 172.30.29.2
-    User debian
-    IdentityFile ~/.ssh/id_nat_server
-
 Host 192.168.100.*
     User debian
     IdentityFile ~/.ssh/id_internal_vm
-    ProxyJump natserver
+    ProxyJump 172.30.29.2

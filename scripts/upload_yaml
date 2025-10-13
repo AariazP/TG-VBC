@@ -1,9 +1,11 @@
 #!/bin/bash
 
+# Sube un archivo .yaml al cluster y lo
+# ejecuta como recurso de kubernetes
 exec 2> /dev/null
 
 NODE="$1"
-shift   # remove node name from arguments
+shift   
 
 IP=$( get-ip "$NODE" )
 

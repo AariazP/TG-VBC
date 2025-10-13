@@ -21,7 +21,7 @@ while getopts "y" opt; do
       ASSUME_YES=true  # Activar borrado automático
       ;;
     *)
-      echo "Usage: $0 [-y]"
+      echo "Uso: $0 [-y]"
       exit 1
       ;;
   esac

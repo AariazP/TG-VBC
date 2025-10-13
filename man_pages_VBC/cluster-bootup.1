@@ -1,0 +1,30 @@
+.\" Manpage for cluster-bootup
+.TH CLUSTER-BOOTUP 1 "Octubre 2025" "1.0" "Comandos de usuario"
+.SH NOMBRE
+cluster-bootup \- utilidad para incializar el cluster
+.SH SINOPSIS
+.B cluster-bootup [\fB-m\fR <num-masters>] [\fB-w\fR <num-workers>]
+.I [\fB-b\fR ]
+.br
+
+.SH DESCRIPCION
+\fBcluster-bootup\fR utilidad para inicializar el cluster, permite determinar la cantidad de masters, workers y si se crea el NAT-Backup
+.SH OPCIONES
+.TP
+\fB-m\fR \fI<masters>\fR
+determina la cantidad de masters
+.br
+.TP 
+\fB-w\fR \fI<workers>\fR
+determina la cantidad de workers
+.SH EJEMPLOS
+.TP
+inicializar un cluster con 1 master 2 workers y creando el servidor NAT-Backup
+.br
+.TP
+	$ cluster-bootup -m 1 -w 2 -b
+.SH AUTORES
+.TP
+Anubis Correa
+.TP
+José Alejandro Arias

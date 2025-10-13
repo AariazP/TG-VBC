@@ -1,11 +1,7 @@
-# .bashrc
+# ================================= vbc specifc configs ========
 
-
-# ================================= user-specific configs ========
-
-export PATH=$PATH:/root/TG-VBC
-export PATH=$PATH:/root/TG-VBC/actions
-# ================================ Auto-completion script ============
+export PATH=$PATH:/root/TG-VBC/scripts
+# ================================ Auto-completion script for vbc command ============
 
 _vbc_completion() {
     local cur prev
@@ -69,17 +65,3 @@ complete -F _vbc_completion vbc
 complete -F _vbc_completion vbc
 
 # =================================================================
-
-# User specific aliases and functions
-
-alias rm='rm -i'
-alias cp='cp -i'
-alias mv='mv -i'
-
-# Source global definitions
-if [ -f /etc/bashrc ]; then
-	. /etc/bashrc
-fi
-
-
-

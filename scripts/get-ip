@@ -12,7 +12,7 @@
 # el uso correcto del script y se termina.
 if [ $# -lt 1 ]
 then
-   echo "usage: get-ip <vm-name>"
+   echo "uso: get-ip <vm-name>"
    exit 0
 fi
 

@@ -9,7 +9,7 @@
 #   usando plantillas predefinidas.
 # ---------------------------------------------------------------
 
-# Variable que indica si se debe crear el servidor de backup
+# Variable que indica si se debe crear el servidor de NAT backup
 BACKUP=0
 
 # Procesar opciones:
@@ -17,7 +17,7 @@ BACKUP=0
 while getopts "b" opt; do
   case $opt in
     b) BACKUP=1 ;;  # Activar creación del backup
-    *) echo "Usage: $0 [-w NUM_WORKERS] [-m NUM_MASTERS] [-b NAT server backup?]" >&2
+    *) echo "Uso: $0 [-w NUM_WORKERS] [-m NUM_MASTERS] [-b NAT server backup?]" >&2
        exit 1 ;;
   esac
 done
